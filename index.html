@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Daily Todo</title>
+
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --text: #111;
+    --muted: #666;
+    --border: #e5e7eb;
+    --accent: #111;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text);
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+
+  h1 {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 16px;
+    margin: 0 0 12px;
+    color: var(--muted);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  @media (min-width: 768px) {
+    .grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .input {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    outline: none;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  li:last-child {
+    border-bottom: none;
+  }
+
+  button {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: var(--accent);
+    color: white;
+  }
+
+  .secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+
+  .empty {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 0;
+  }
+
+  footer {
+    margin-top: 30px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>Daily Focus</h1>
+
+  <div class="card">
+    <h2>Today</h2>
+    <input id="taskInput" class="input" placeholder="Add a task and press Enter" />
+    <ul id="todoList"></ul>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Completed</h2>
+      <ul id="completedList"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Missed</h2>
+      <ul id="missedList"></ul>
+    </div>
+  </div>
+
+  <footer>
+    Resets daily at 4:00 AM • Stored locally • No deletions
+  </footer>
+</div>
+
+<script>
+const STORAGE_KEY = "minimal_todo_data";
+
+function get4AMTimestamp(date) {
+  const d = new Date(date);
+  d.setHours(4, 0, 0, 0);
+  if (date < d) d.setDate(d.getDate() - 1);
+  return d.getTime();
+}
+
+function loadData() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+    lastReset: get4AMTimestamp(new Date()),
+    todos: [],
+    completed: [],
+    missed: []
+  };
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function checkReset(data) {
+  const current = get4AMTimestamp(new Date());
+  if (data.lastReset !== current) {
+    data.missed.push(...data.todos);
+    data.todos = [];
+    data.lastReset = current;
+    saveData(data);
+  }
+}
+
+function render() {
+  const data = loadData();
+  checkReset(data);
+
+  const todo = document.getElementById("todoList");
+  const completed = document.getElementById("completedList");
+  const missed = document.getElementById("missedList");
+
+  todo.innerHTML = "";
+  completed.innerHTML = "";
+  missed.innerHTML = "";
+
+  if (!data.todos.length) {
+    todo.innerHTML = `<div class="empty">Nothing pending</div>`;
+  }
+
+  data.todos.forEach((task, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${task}</span>
+      <button>Done</button>
+    `;
+    li.querySelector("button").onclick = () => {
+      data.completed.push(task);
+      data.todos.splice(i, 1);
+      saveData(data);
+      render();
+    };
+    todo.appendChild(li);
+  });
+
+  if (!data.completed.length) {
+    completed.innerHTML = `<div class="empty">No completed tasks yet</div>`;
+  }
+
+  data.completed.forEach(task => {
+    const li = document.createElement("li");
+    li.textContent = task;
+    completed.appendChild(li);
+  });
+
+  if (!data.missed.length) {
+    missed.innerHTML = `<div class="empty">Nothing missed 🎉</div>`;
+  }
+
+  data.missed.forEach((task, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>${task}</span>
+      <button class="secondary">Redo</button>
+    `;
+    li.querySelector("button").onclick = () => {
+      data.todos.push(task);
+      data.missed.splice(i, 1);
+      saveData(data);
+      render();
+    };
+    missed.appendChild(li);
+  });
+}
+
+document.getElementById("taskInput").addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.value.trim()) {
+    const data = loadData();
+    data.todos.push(e.target.value.trim());
+    e.target.value = "";
+    saveData(data);
+    render();
+  }
+});
+
+render();
+</script>
+
+</body>
+</html>
