@@ -6,11 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- Firebase -->
-<script type="module">
+ <script type="module" src="app.js"></script>
+<!-- 
+ <script type="module">
+/* ================= FIREBASE IMPORTS ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* ================= FIREBASE INIT ================= */
 const firebaseConfig = {
     apiKey: "AIzaSyCcdi8fiymbvtRHtMkqeKniIcDzx2X2Ftw",
     authDomain: "minimaltodo-539fb.firebaseapp.com",
@@ -20,9 +24,32 @@ const firebaseConfig = {
     appId: "1:850265669107:web:e94126febdfb5f8bc62686"
   };
 
-window.firebaseAPI = { auth, db, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp };
-</script>
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
+/* ================= APP LOGIC ================= */
+
+// auth is NOW guaranteed to exist
+document.getElementById("loginBtn").onclick = async () => {
+  const provider = new GoogleAuthProvider();
+  await signInWithPopup(auth, provider);
+};
+
+document.getElementById("logoutBtn").onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  console.log("Logged in as:", user.displayName);
+
+  await setDoc(doc(db, "users", user.uid), {
+    name: user.displayName,
+    lastLogin: serverTimestamp()
+  }, { merge: true });
+});
+
+// everything else here…
+</script> -->
 <style>
 body {
   font-family: system-ui, sans-serif;
@@ -99,125 +126,5 @@ hr { border: none; border-top: 1px solid #1e293b; margin: 15px 0; }
   </div>
 </div>
 
-<script type="module">
-const {
-  auth,
-  db,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  where,
-  serverTimestamp
-} = window.firebaseAPI;
-
-let user;
-let timers = {};
-
-function todayKey() {
-  const d = new Date();
-  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
-  return d.toISOString().split("T")[0];
-}
-
-document.getElementById("loginBtn").onclick = async () => {
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
-};
-
-document.getElementById("logoutBtn").onclick = () => signOut(auth);
-
-onAuthStateChanged(auth, async u => {
-  if (!u) return;
-  user = u;
-  document.getElementById("authSection").style.display = "none";
-  document.getElementById("app").style.display = "block";
-  document.getElementById("userName").innerText = u.displayName;
-
-  await setDoc(doc(db, "users", u.uid), {
-    name: u.displayName,
-    today: todayKey()
-  }, { merge: true });
-
-  loadTasks();
-  loadLeaderboard();
-});
-
-document.getElementById("addTask").onclick = async () => {
-  const text = taskText.value.trim();
-  if (!text) return;
-  const mins = Number(taskTime.value);
-  await addDoc(collection(db, "tasks"), {
-    uid: user.uid,
-    text,
-    duration: mins ? mins * 60 : null,
-    remaining: mins ? mins * 60 : null,
-    status: "pending",
-    day: todayKey(),
-    createdAt: serverTimestamp()
-  });
-  taskText.value = taskTime.value = "";
-};
-
-function loadTasks() {
-  const q = query(collection(db, "tasks"), where("uid","==",user.uid), where("day","==",todayKey()));
-  onSnapshot(q, snap => {
-    taskList.innerHTML = "";
-    snap.forEach(d => {
-      const t = d.data();
-      const div = document.createElement("div");
-      div.className = `task ${t.status}`;
-      div.innerHTML = `
-        ${t.text}
-        ${t.duration ? `<br><span class="small">${t.remaining}s</span>` : ""}
-        ${t.status==="pending" && t.duration ? `<button data-id="${d.id}">Start</button>` : ""}
-      `;
-      if (t.duration && t.status==="pending") {
-        div.querySelector("button").onclick = () => startTimer(d.id, t.remaining);
-      }
-      taskList.appendChild(div);
-    });
-  });
-}
-
-function startTimer(id, seconds) {
-  clearInterval(timers[id]);
-  timers[id] = setInterval(async () => {
-    seconds--;
-    await updateDoc(doc(db,"tasks",id), { remaining: seconds });
-    if (seconds <= 0) {
-      clearInterval(timers[id]);
-      await updateDoc(doc(db,"tasks",id), { status:"completed" });
-    }
-  },1000);
-}
-
-function loadLeaderboard() {
-  const q = query(collection(db,"tasks"), where("day","==",todayKey()));
-  onSnapshot(q, snap => {
-    const stats = {};
-    snap.forEach(d => {
-      const t = d.data();
-      stats[t.uid] ??= { completed:0, missed:0 };
-      if (t.status==="completed") stats[t.uid].completed++;
-      if (t.status==="missed") stats[t.uid].missed++;
-    });
-    leaderboard.innerHTML = "";
-    Object.entries(stats).forEach(([uid,s])=>{
-      const div = document.createElement("div");
-      div.innerText = `${uid.slice(0,6)}…  ✅${s.completed} ❌${s.missed}`;
-      leaderboard.appendChild(div);
-    });
-  });
-}
-</script>
 </body>
 </html>
