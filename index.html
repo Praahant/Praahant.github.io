@@ -2,258 +2,222 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Daily Todo</title>
+<title>Minimal Todo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCcdi8fiymbvtRHtMkqeKniIcDzx2X2Ftw",
+    authDomain: "minimaltodo-539fb.firebaseapp.com",
+    projectId: "minimaltodo-539fb",
+    storageBucket: "minimaltodo-539fb.firebasestorage.app",
+    messagingSenderId: "850265669107",
+    appId: "1:850265669107:web:e94126febdfb5f8bc62686"
+  };
+
+window.firebaseAPI = { auth, db, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp };
+</script>
 
 <style>
-  :root {
-    --bg: #f4f6f8;
-    --card: #ffffff;
-    --text: #111;
-    --muted: #666;
-    --border: #e5e7eb;
-    --accent: #111;
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-    background: var(--bg);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--text);
-  }
-
-  .container {
-    max-width: 900px;
-    margin: 40px auto;
-    padding: 0 20px;
-  }
-
-  h1 {
-    font-size: 22px;
-    margin-bottom: 20px;
-  }
-
-  h2 {
-    font-size: 16px;
-    margin: 0 0 12px;
-    color: var(--muted);
-  }
-
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  @media (min-width: 768px) {
-    .grid {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-  }
-
-  .input {
-    width: 100%;
-    padding: 12px;
-    font-size: 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    outline: none;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0;
-    font-size: 14px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  li:last-child {
-    border-bottom: none;
-  }
-
-  button {
-    font-size: 12px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    background: var(--accent);
-    color: white;
-  }
-
-  .secondary {
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--border);
-  }
-
-  .empty {
-    font-size: 13px;
-    color: var(--muted);
-    padding: 8px 0;
-  }
-
-  footer {
-    margin-top: 30px;
-    font-size: 12px;
-    color: var(--muted);
-    text-align: center;
-  }
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  margin: 0;
+  padding: 20px;
+}
+h1 { font-size: 1.4rem; }
+button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+input {
+  padding: 6px;
+  border-radius: 6px;
+  border: none;
+}
+.card {
+  background: #020617;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.small { font-size: 0.8rem; color: #94a3b8; }
+.flex { display: flex; gap: 8px; flex-wrap: wrap; }
+.task.completed { color: #22c55e; }
+.task.missed { color: #ef4444; }
+hr { border: none; border-top: 1px solid #1e293b; margin: 15px 0; }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-  <h1>Daily Focus</h1>
-
-  <div class="card">
-    <h2>Today</h2>
-    <input id="taskInput" class="input" placeholder="Add a task and press Enter" />
-    <ul id="todoList"></ul>
-  </div>
-
-  <div class="grid">
-    <div class="card">
-      <h2>Completed</h2>
-      <ul id="completedList"></ul>
-    </div>
-
-    <div class="card">
-      <h2>Missed</h2>
-      <ul id="missedList"></ul>
-    </div>
-  </div>
-
-  <footer>
-    Resets daily at 2:00 AM • Stored locally • No deletions
-  </footer>
+<h1>🧠 Minimal Todo</h1>
+<div id="authSection">
+  <button id="loginBtn">Sign in with Google</button>
 </div>
 
-<script>
-const STORAGE_KEY = "minimal_todo_data";
+<div id="app" style="display:none">
+  <div class="card">
+    <div class="flex">
+      <strong id="userName"></strong>
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </div>
 
-function get4AMTimestamp(date) {
-  const d = new Date(date);
-  d.setHours(2, 0, 0, 0);
-  if (date < d) d.setDate(d.getDate() - 1);
-  return d.getTime();
+  <div class="card">
+    <h3>Add Task</h3>
+    <input id="taskText" placeholder="Task name" />
+    <input id="taskTime" type="number" placeholder="Minutes (optional)" />
+    <button id="addTask">Add</button>
+  </div>
+
+  <div class="card">
+    <h3>Today's Tasks</h3>
+    <div id="taskList"></div>
+  </div>
+
+  <div class="card">
+    <h3>Leaderboard</h3>
+    <div id="leaderboard"></div>
+  </div>
+
+  <div class="card">
+    <h3>Friends</h3>
+    <input id="friendUid" placeholder="Friend UID" />
+    <button id="addFriend">Add Friend</button>
+    <div id="friendsTasks"></div>
+  </div>
+</div>
+
+<script type="module">
+const {
+  auth,
+  db,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  where,
+  serverTimestamp
+} = window.firebaseAPI;
+
+let user;
+let timers = {};
+
+function todayKey() {
+  const d = new Date();
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  return d.toISOString().split("T")[0];
 }
 
-function loadData() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
-    lastReset: get4AMTimestamp(new Date()),
-    todos: [],
-    completed: [],
-    missed: []
-  };
-}
+document.getElementById("loginBtn").onclick = async () => {
+  const provider = new GoogleAuthProvider();
+  await signInWithPopup(auth, provider);
+};
 
-function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
+document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
-function checkReset(data) {
-  const current = get4AMTimestamp(new Date());
-  if (data.lastReset !== current) {
-    data.missed.push(...data.todos);
-    data.todos = [];
-    data.lastReset = current;
-    saveData(data);
-  }
-}
+onAuthStateChanged(auth, async u => {
+  if (!u) return;
+  user = u;
+  document.getElementById("authSection").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("userName").innerText = u.displayName;
 
-function render() {
-  const data = loadData();
-  checkReset(data);
+  await setDoc(doc(db, "users", u.uid), {
+    name: u.displayName,
+    today: todayKey()
+  }, { merge: true });
 
-  const todo = document.getElementById("todoList");
-  const completed = document.getElementById("completedList");
-  const missed = document.getElementById("missedList");
-
-  todo.innerHTML = "";
-  completed.innerHTML = "";
-  missed.innerHTML = "";
-
-  if (!data.todos.length) {
-    todo.innerHTML = `<div class="empty">Nothing pending</div>`;
-  }
-
-  data.todos.forEach((task, i) => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <span>${task}</span>
-      <button>Done</button>
-    `;
-    li.querySelector("button").onclick = () => {
-      data.completed.push(task);
-      data.todos.splice(i, 1);
-      saveData(data);
-      render();
-    };
-    todo.appendChild(li);
-  });
-
-  if (!data.completed.length) {
-    completed.innerHTML = `<div class="empty">No completed tasks yet</div>`;
-  }
-
-  data.completed.forEach(task => {
-    const li = document.createElement("li");
-    li.textContent = task;
-    completed.appendChild(li);
-  });
-
-  if (!data.missed.length) {
-    missed.innerHTML = `<div class="empty">Nothing missed 🎉</div>`;
-  }
-
-  data.missed.forEach((task, i) => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <span>${task}</span>
-      <button class="secondary">Redo</button>
-    `;
-    li.querySelector("button").onclick = () => {
-      data.todos.push(task);
-      data.missed.splice(i, 1);
-      saveData(data);
-      render();
-    };
-    missed.appendChild(li);
-  });
-}
-
-document.getElementById("taskInput").addEventListener("keydown", e => {
-  if (e.key === "Enter" && e.target.value.trim()) {
-    const data = loadData();
-    data.todos.push(e.target.value.trim());
-    e.target.value = "";
-    saveData(data);
-    render();
-  }
+  loadTasks();
+  loadLeaderboard();
 });
 
-render();
-</script>
+document.getElementById("addTask").onclick = async () => {
+  const text = taskText.value.trim();
+  if (!text) return;
+  const mins = Number(taskTime.value);
+  await addDoc(collection(db, "tasks"), {
+    uid: user.uid,
+    text,
+    duration: mins ? mins * 60 : null,
+    remaining: mins ? mins * 60 : null,
+    status: "pending",
+    day: todayKey(),
+    createdAt: serverTimestamp()
+  });
+  taskText.value = taskTime.value = "";
+};
 
+function loadTasks() {
+  const q = query(collection(db, "tasks"), where("uid","==",user.uid), where("day","==",todayKey()));
+  onSnapshot(q, snap => {
+    taskList.innerHTML = "";
+    snap.forEach(d => {
+      const t = d.data();
+      const div = document.createElement("div");
+      div.className = `task ${t.status}`;
+      div.innerHTML = `
+        ${t.text}
+        ${t.duration ? `<br><span class="small">${t.remaining}s</span>` : ""}
+        ${t.status==="pending" && t.duration ? `<button data-id="${d.id}">Start</button>` : ""}
+      `;
+      if (t.duration && t.status==="pending") {
+        div.querySelector("button").onclick = () => startTimer(d.id, t.remaining);
+      }
+      taskList.appendChild(div);
+    });
+  });
+}
+
+function startTimer(id, seconds) {
+  clearInterval(timers[id]);
+  timers[id] = setInterval(async () => {
+    seconds--;
+    await updateDoc(doc(db,"tasks",id), { remaining: seconds });
+    if (seconds <= 0) {
+      clearInterval(timers[id]);
+      await updateDoc(doc(db,"tasks",id), { status:"completed" });
+    }
+  },1000);
+}
+
+function loadLeaderboard() {
+  const q = query(collection(db,"tasks"), where("day","==",todayKey()));
+  onSnapshot(q, snap => {
+    const stats = {};
+    snap.forEach(d => {
+      const t = d.data();
+      stats[t.uid] ??= { completed:0, missed:0 };
+      if (t.status==="completed") stats[t.uid].completed++;
+      if (t.status==="missed") stats[t.uid].missed++;
+    });
+    leaderboard.innerHTML = "";
+    Object.entries(stats).forEach(([uid,s])=>{
+      const div = document.createElement("div");
+      div.innerText = `${uid.slice(0,6)}…  ✅${s.completed} ❌${s.missed}`;
+      leaderboard.appendChild(div);
+    });
+  });
+}
+</script>
 </body>
 </html>
