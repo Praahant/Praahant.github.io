@@ -5,126 +5,234 @@
 <title>Minimal Todo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase -->
- <script type="module" src="app.js"></script>
-<!-- 
- <script type="module">
-/* ================= FIREBASE IMPORTS ================= */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<script type="module" src="app.js"></script>
 
-/* ================= FIREBASE INIT ================= */
-const firebaseConfig = {
-    apiKey: "AIzaSyCcdi8fiymbvtRHtMkqeKniIcDzx2X2Ftw",
-    authDomain: "minimaltodo-539fb.firebaseapp.com",
-    projectId: "minimaltodo-539fb",
-    storageBucket: "minimaltodo-539fb.firebasestorage.app",
-    messagingSenderId: "850265669107",
-    appId: "1:850265669107:web:e94126febdfb5f8bc62686"
-  };
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-/* ================= APP LOGIC ================= */
-
-// auth is NOW guaranteed to exist
-document.getElementById("loginBtn").onclick = async () => {
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
-};
-
-document.getElementById("logoutBtn").onclick = () => signOut(auth);
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-  console.log("Logged in as:", user.displayName);
-
-  await setDoc(doc(db, "users", user.uid), {
-    name: user.displayName,
-    lastLogin: serverTimestamp()
-  }, { merge: true });
-});
-
-// everything else here…
-</script> -->
 <style>
+/* ================= BASE ================= */
 body {
-  font-family: system-ui, sans-serif;
-  background: #0f172a;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background: linear-gradient(180deg, #020617, #020617);
   color: #e5e7eb;
   margin: 0;
-  padding: 20px;
 }
-h1 { font-size: 1.4rem; }
+
+h1,h2,h3 {
+  margin: 0 0 10px 0;
+}
+
 button {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb, #1e40af);
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: 500;
 }
-input {
-  padding: 6px;
-  border-radius: 6px;
-  border: none;
-}
-.card {
+
+button.secondary {
   background: #020617;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  border: 1px solid #1e293b;
 }
-.small { font-size: 0.8rem; color: #94a3b8; }
-.flex { display: flex; gap: 8px; flex-wrap: wrap; }
+
+input {
+  padding: 8px;
+  border-radius: 10px;
+  border: none;
+  background: #020617;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+}
+
+input::placeholder {
+  color: #64748b;
+}
+
+/* ================= NAV ================= */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(2,6,23,0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #1e293b;
+}
+
+.nav-inner {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-links button {
+  background: transparent;
+  border: 1px solid #1e293b;
+}
+
+/* ================= LAYOUT ================= */
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: radial-gradient(circle at top, #020617, #020617);
+  border: 1px solid #1e293b;
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02);
+}
+
+/* ================= PAGES ================= */
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+/* ================= TASKS ================= */
+.task {
+  padding: 10px;
+  border-bottom: 1px dashed #1e293b;
+}
+
 .task.completed { color: #22c55e; }
 .task.missed { color: #ef4444; }
-hr { border: none; border-top: 1px solid #1e293b; margin: 15px 0; }
+
+/* ================= LEADERBOARD ================= */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tabs button {
+  flex: 1;
+  background: #020617;
+  border: 1px solid #1e293b;
+}
+
+.tabs button.active {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed #1e293b;
+}
+
+/* ================= AUTH ================= */
+#authSection {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>
 </head>
 
 <body>
 
-<h1>🧠 Minimal Todo</h1>
+<!-- ================= AUTH ================= -->
 <div id="authSection">
   <button id="loginBtn">Sign in with Google</button>
 </div>
 
+<!-- ================= APP ================= -->
 <div id="app" style="display:none">
-  <div class="card">
-    <div class="flex">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
       <strong id="userName"></strong>
-      <button id="logoutBtn">Logout</button>
+      <div class="nav-links">
+        <button onclick="showPage('tasksPage')">Tasks</button>
+        <button onclick="showPage('friendsPage')">Friends</button>
+        <button onclick="showPage('leaderboardPage')">Leaderboard</button>
+        <button class="secondary" id="logoutBtn">Logout</button>
+      </div>
     </div>
-  </div>
+  </nav>
 
-  <div class="card">
-    <h3>Add Task</h3>
-    <input id="taskText" placeholder="Task name" />
-    <input id="taskTime" type="number" placeholder="Minutes (optional)" />
-    <button id="addTask">Add</button>
-  </div>
+  <div class="container">
 
-  <div class="card">
-    <h3>Today's Tasks</h3>
-    <div id="taskList"></div>
-  </div>
+    <!-- ================= TASKS PAGE ================= -->
+    <section id="tasksPage" class="page active">
+      <div class="card">
+        <h3>Add Task</h3>
+        <input id="taskText" placeholder="Task name" />
+        <input id="taskTime" type="number" placeholder="Minutes (optional)" />
+        <button id="addTask">Add Task</button>
+      </div>
 
-  <div class="card">
-    <h3>Leaderboard</h3>
-    <div id="leaderboard"></div>
-  </div>
+      <div class="card">
+        <h3>Today's Tasks</h3>
+        <div id="taskList"></div>
+      </div>
+    </section>
 
-  <div class="card">
-    <h3>Friends</h3>
-    <input id="friendUid" placeholder="Friend UID" />
-    <button id="addFriend">Add Friend</button>
-    <div id="friendsTasks"></div>
+    <!-- ================= FRIENDS PAGE ================= -->
+    <section id="friendsPage" class="page">
+      <div class="card">
+        <h3>Add Friend</h3>
+        <input id="friendUsername" placeholder="Friend username" />
+        <button id="addFriend">Add Friend</button>
+      </div>
+
+      <div class="card">
+        <h3>Friends Activity</h3>
+        <div id="friendsTasks"></div>
+      </div>
+    </section>
+
+    <!-- ================= LEADERBOARD PAGE ================= -->
+    <section id="leaderboardPage" class="page">
+      <div class="card">
+        <h3>Leaderboard</h3>
+
+        <div class="tabs">
+          <button class="active" onclick="setLeaderboard('daily')">Daily</button>
+          <button onclick="setLeaderboard('weekly')">Weekly</button>
+          <button onclick="setLeaderboard('overall')">Overall</button>
+        </div>
+
+        <div id="leaderboard"></div>
+      </div>
+    </section>
+
   </div>
 </div>
+
+<!-- ================= UI SCRIPT (NO FIREBASE) ================= -->
+<script>
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setLeaderboard(type) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // app.js will react to this later
+  document.getElementById('leaderboard').dataset.mode = type;
+}
+</script>
 
 </body>
 </html>
